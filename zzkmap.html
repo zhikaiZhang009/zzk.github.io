@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>六大经济走廊</title>
+  <style>
+    html, body, arcgis-map {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+    
+    #header {
+      height: 80px;
+      background: #4c4c4c;
+      color: white;
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #header h1 {
+      margin: 0;
+      font-size: 24px;
+      white-space: nowrap;
+    }
+    
+    #container {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+    
+    #viewDiv {
+      flex: 3;
+    }
+    
+    #basemapGallery {
+      flex: 1;
+      background: #f5f5f5;
+      padding: 10px;
+      overflow-y: auto;
+    }
+  </style>
+  
+  <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.28/"></script>
+  
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/widgets/ScaleBar",
+      "esri/widgets/Legend",
+      "esri/widgets/Search",
+      "esri/widgets/LayerList",
+      "esri/Basemap",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/BasemapGallery"
+    ], function(
+      Map, MapView, ScaleBar, Legend, Search, LayerList, 
+      Basemap, FeatureLayer, BasemapGallery
+    ) {
+      // 创建地图
+      const map = new Map({
+        basemap: "streets-navigation-vector"
+      });
+      
+      // 创建视图
+      const view = new MapView({
+        container: "viewDiv",
+        map: map
+      });
+      
+      // 添加专题图层及其所有子图层
+      const thematicLayer = new FeatureLayer({
+        url: "https://www.geosceneonline.cn/server/rest/services/Hosted/六大经济走廊2_WFL1/FeatureServer",
+        outFields: ["*"]
+      });
+      
+      thematicLayer.when(function() {
+        // 图层加载完成后，将视图设置为图层范围
+        view.extent = thematicLayer.fullExtent;
+        
+        // 直接加载所有子图层
+        for(let i = 1; i < 6; i++) {
+          const subLayer = new FeatureLayer({
+            url: thematicLayer.url + "/" + i,
+            outFields: ["*"]
+          });
+          subLayer.when(() => {
+            console.log("子图层" + i + "加载成功");
+          }).catch(err => {
+            console.error("子图层" + i + "加载失败:", err);
+          });
+          map.add(subLayer);
+        }
+      });
+      
+      map.add(thematicLayer);
+      
+      // 添加比例尺
+      const scaleBar = new ScaleBar({
+        view: view
+      });
+      view.ui.add(scaleBar, "bottom-left");
+      
+      // 添加图例
+      const legend = new Legend({
+        view: view
+      });
+      view.ui.add(legend, "bottom-right");
+      
+      // 添加搜索框
+      const search = new Search({
+        view: view
+      });
+      view.ui.add(search, "top-right");
+      
+      // 添加图层列表(默认折叠)
+      const layerList = new LayerList({
+        view: view,
+        container: document.createElement("div"),
+        listItemCreatedFunction: function(event) {
+          const item = event.item;
+          item.panel = {
+            content: "legend",
+            open: false
+          };
+        }
+      });
+      view.ui.add(layerList, "top-left");
+      
+      // 添加底图库到右侧区域
+      const basemapGallery = new BasemapGallery({
+        view: view,
+        container: document.getElementById("basemapGallery")
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <div id="header">
+    <h1>六大经济走廊</h1>
+  </div>
+  <div id="container">
+    <arcgis-map id="viewDiv"></arcgis-map>
+    <div id="basemapGallery"></div>
+  </div>
+</body>
+</html>
